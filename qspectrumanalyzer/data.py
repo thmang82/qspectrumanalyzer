@@ -2,6 +2,7 @@ import time, sys, os
 
 from Qt import QtCore
 import numpy as np
+from pprint import pprint
 
 from qspectrumanalyzer.utils import smooth
 from qspectrumanalyzer.backends import soapy_power
@@ -70,9 +71,15 @@ class DataStorage(QtCore.QObject):
     def __init__(self, max_history_size=100, parent=None):
         super().__init__(parent)
         self.max_history_size = max_history_size
+
         self.smooth = False
         self.smooth_length = 11
         self.smooth_window = "hanning"
+
+        self.temp_smooth = False
+        self.temp_smooth_length = 10
+        self.temp_smooth_window = "hanning"
+
         self.subtract_baseline = False
         self.prev_baseline = None
         self.baseline = None
@@ -90,6 +97,7 @@ class DataStorage(QtCore.QObject):
         self.wait()
         self.x = None
         self.history = None
+        self.history_raw = None
         self.reset_data()
 
     def reset_data(self):
@@ -131,8 +139,12 @@ class DataStorage(QtCore.QObject):
 
     def update_data(self, data):
         """Update main spectrum data (and possibly apply smoothing)"""
+
+        if self.temp_smooth:
+            history_raw = self.history_raw.get_buffer()
+            data["y"] = self.smooth_data_temporal(history_raw, -1)
         if self.smooth:
-            data["y"] = self.smooth_data(data["y"])
+            data["y"] = self.smooth_data_freq(data["y"])
 
         self.y = data["y"]
         self.data_updated.emit(self)
@@ -145,8 +157,10 @@ class DataStorage(QtCore.QObject):
         """Update spectrum measurements history"""
         if self.history is None:
             self.history = HistoryBuffer(len(data["y"]), self.max_history_size)
+            self.history_raw = HistoryBuffer(len(data["y"]), self.max_history_size)
 
         self.history.append(data["y"])
+        self.history_raw.append(data["y"])
         self.history_updated.emit(self)
 
     def update_average(self, data):
@@ -173,9 +187,26 @@ class DataStorage(QtCore.QObject):
             self.peak_hold_min = np.minimum(self.peak_hold_min, data["y"])
             self.peak_hold_min_updated.emit(self)
 
-    def smooth_data(self, y):
-        """Apply smoothing function to data"""
+    def smooth_data_freq(self, y):
+        """Apply frequency smoothing function to data"""
         return smooth(y, window_len=self.smooth_length, window=self.smooth_window)
+
+    def smooth_data_temporal(self, buf_raw, t_pos):
+        """Apply temporal smoothing function to data"""
+        n_len = self.temp_smooth_length
+        n_back = len(buf_raw)
+        if n_back < n_len:
+            n_len = n_back
+        freq_num = len(buf_raw[t_pos])
+        arr = np.empty(freq_num)
+        for x in range(freq_num):
+            val_sum = 0
+            for y in range(t_pos, t_pos * n_len -1, -1):
+                v = buf_raw[y][x]
+                # print("X/Y:", x, y, v)
+                val_sum += v
+            arr[x] = val_sum / n_len
+        return arr
 
     def set_smooth(self, toggle, length=11, window="hanning"):
         """Toggle smoothing and set smoothing params"""
@@ -183,6 +214,14 @@ class DataStorage(QtCore.QObject):
             self.smooth = toggle
             self.smooth_length = length
             self.smooth_window = window
+            self.start_task(self.recalculate_data)
+
+    def set_temporal_smooth(self, toggle, length=11, window="hanning"):
+        """Toggle smoothing and set smoothing params"""
+        if toggle != self.temp_smooth or length != self.temp_smooth_length or window != self.temp_smooth_window:
+            self.temp_smooth = toggle
+            self.temp_smooth_length = length
+            self.temp_smooth_window = window
             self.start_task(self.recalculate_data)
 
     def set_subtract_baseline(self, toggle, baseline_file=None):
@@ -225,6 +264,8 @@ class DataStorage(QtCore.QObject):
         """Recalculate spectrum measurements history"""
         if self.history is None:
             return
+        if self.history_raw is None:
+            return
 
         history = self.history.get_buffer()
         if self.prev_baseline is not None and len(history[-1]) == len(self.prev_baseline):
@@ -233,26 +274,49 @@ class DataStorage(QtCore.QObject):
         if self.subtract_baseline and self.baseline is not None and len(history[-1]) == len(self.baseline):
             history -= self.baseline
 
-        self.history_recalculated.emit(self)
+        self.history_recalculated.emit(self)        
 
     def recalculate_data(self):
         """Recalculate current data from history"""
         if self.history is None:
             return
+        if self.history_raw is None:
+            return
 
         history = self.history.get_buffer()
-        if self.smooth:
-            self.y = self.smooth_data(history[-1])
+        history_raw = self.history_raw.get_buffer()
+        # pprint(vars(history))
+        print("HistLan:", len(history))
+
+        bin_num_freq = 0
+        if len(history) > 0:
+            arr_0 = history[-1]
+            bin_num_freq = len(arr_0)
+            print("FreqLen:", len(arr_0))
+
+        if self.temp_smooth:
+            n_back = len(history_raw)
+            print("n_back:", n_back, bin_num_freq)
+            if n_back > 0:
+                self.y = self.smooth_data_temporal(history_raw, -1)
+            else:
+                self.y = history[-1]
+            print("n_back:", n_back, bin_num_freq)
+
+        elif self.smooth:
+            self.y = self.smooth_data_freq(history[-1])
             self.average_counter = 0
             self.average = self.y.copy()
             self.peak_hold_max = self.y.copy()
             self.peak_hold_min = self.y.copy()
             for y in history[:-1]:
+                print("  - SmoothHist:", y)
                 self.average_counter += 1
-                y = self.smooth_data(y)
+                y = self.smooth_data_freq(y)
                 self.average = np.average((self.average, y), axis=0, weights=(self.average_counter - 1, 1))
                 self.peak_hold_max = np.maximum(self.peak_hold_max, y)
                 self.peak_hold_min = np.minimum(self.peak_hold_min, y)
+
         else:
             self.y = history[-1]
             self.average_counter = self.history.history_size

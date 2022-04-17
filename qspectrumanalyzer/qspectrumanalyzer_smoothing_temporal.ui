@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>QSpectrumAnalyzerSmoothing</class>
- <widget class="QDialog" name="QSpectrumAnalyzerSmoothing">
+ <class>QSpectrumAnalyzerSmoothingTemporal</class>
+ <widget class="QDialog" name="QSpectrumAnalyzerSmoothingTemporal">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Smoothing - QSpectrumAnalyzer</string>
+   <string>Temporal Smoothing - QSpectrumAnalyzer</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -118,7 +118,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>QSpectrumAnalyzerSmoothing</receiver>
+   <receiver>QSpectrumAnalyzerSmoothingTemporal</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -134,7 +134,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>QSpectrumAnalyzerSmoothing</receiver>
+   <receiver>QSpectrumAnalyzerSmoothingTemporal</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

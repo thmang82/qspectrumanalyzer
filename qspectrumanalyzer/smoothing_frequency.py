@@ -1,9 +1,9 @@
 from Qt import QtCore, QtWidgets
 
-from qspectrumanalyzer.ui_qspectrumanalyzer_smoothing import Ui_QSpectrumAnalyzerSmoothing
+from qspectrumanalyzer.ui_qspectrumanalyzer_smoothing_frequency import Ui_QSpectrumAnalyzerSmoothingFrequency
 
 
-class QSpectrumAnalyzerSmoothing(QtWidgets.QDialog, Ui_QSpectrumAnalyzerSmoothing):
+class QSpectrumAnalyzerSmoothingFrequency(QtWidgets.QDialog, Ui_QSpectrumAnalyzerSmoothingFrequency):
     """QSpectrumAnalyzer spectrum smoothing dialog"""
     def __init__(self, parent=None):
         # Initialize UI

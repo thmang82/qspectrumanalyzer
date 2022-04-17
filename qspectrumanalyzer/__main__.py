@@ -11,7 +11,8 @@ from qspectrumanalyzer.plot import SpectrumPlotWidget, WaterfallPlotWidget
 from qspectrumanalyzer.utils import str_to_color, human_time
 
 from qspectrumanalyzer.settings import QSpectrumAnalyzerSettings
-from qspectrumanalyzer.smoothing import QSpectrumAnalyzerSmoothing
+from qspectrumanalyzer.smoothing_frequency import QSpectrumAnalyzerSmoothingFrequency
+from qspectrumanalyzer.smoothing_temporal import QSpectrumAnalyzerSmoothingTemporal
 from qspectrumanalyzer.persistence import QSpectrumAnalyzerPersistence
 from qspectrumanalyzer.colors import QSpectrumAnalyzerColors
 from qspectrumanalyzer.baseline import QSpectrumAnalyzerBaseline
@@ -176,7 +177,8 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         self.peakHoldMaxCheckBox.setChecked(settings.value("peak_hold_max", 0, int))
         self.peakHoldMinCheckBox.setChecked(settings.value("peak_hold_min", 0, int))
         self.averageCheckBox.setChecked(settings.value("average", 0, int))
-        self.smoothCheckBox.setChecked(settings.value("smooth", 0, int))
+        self.freqSmoothCheckBox.setChecked(settings.value("smooth", 0, int))
+        self.temporalSmoothCheckBox.setChecked(settings.value("temporal_smooth", 0, int))
         self.persistenceCheckBox.setChecked(settings.value("persistence", 0, int))
         self.baselineCheckBox.setChecked(settings.value("baseline", 0, int))
         self.subtractBaselineCheckBox.setChecked(settings.value("subtract_baseline", 0, int))
@@ -217,7 +219,8 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         settings.setValue("peak_hold_max", int(self.peakHoldMaxCheckBox.isChecked()))
         settings.setValue("peak_hold_min", int(self.peakHoldMinCheckBox.isChecked()))
         settings.setValue("average", int(self.averageCheckBox.isChecked()))
-        settings.setValue("smooth", int(self.smoothCheckBox.isChecked()))
+        settings.setValue("smooth", int(self.freqSmoothCheckBox.isChecked()))
+        settings.setValue("temporal", int(self.temporalSmoothCheckBox.isChecked()))
         settings.setValue("persistence", int(self.persistenceCheckBox.isChecked()))
         settings.setValue("baseline", int(self.baselineCheckBox.isChecked()))
         settings.setValue("subtract_baseline", int(self.subtractBaselineCheckBox.isChecked()))
@@ -332,9 +335,14 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
 
         self.data_storage.reset()
         self.data_storage.set_smooth(
-            bool(self.smoothCheckBox.isChecked()),
+            bool(self.freqSmoothCheckBox.isChecked()),
             settings.value("smooth_length", 11, int),
             settings.value("smooth_window", "hanning")
+        )
+        self.data_storage.set_temporal_smooth(
+            bool(self.temporalSmoothCheckBox.isChecked()),
+            settings.value("temporal_smooth_length", 11, int),
+            settings.value("temporal_smooth_window", "hanning")
         )
         self.data_storage.set_subtract_baseline(
             bool(self.subtractBaselineCheckBox.isChecked()),
@@ -362,6 +370,82 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         """Stop power thread"""
         if self.power_thread.alive:
             self.power_thread.stop()
+
+    def computeFreq(self, zoom, right):
+        freq_mhz_min = self.startFreqSpinBox.value()
+        freq_mhz_max = self.stopFreqSpinBox.value()
+        freq_mhz_mid = (freq_mhz_max + freq_mhz_min) / 2.0
+        freq_mhz_diff = abs(freq_mhz_max - freq_mhz_min)
+        print("computeFreq: freq_mhz old:", freq_mhz_min, freq_mhz_max, freq_mhz_diff)
+        zoom_steps = [ 20, 50, 100, 200, 500, 1000 ]
+        mod_steps  = [ 10, 25,  50, 100, 250,  500 ]
+        a_pos      = [  0,  1,   2,   3,   4,    5 ]
+        mod = 10
+        diff = freq_mhz_diff
+        if zoom > 0:
+            print("computeFreq: zoom in")
+            # freq_mhz_diff = freq_mhz_diff / 2
+            diff = freq_mhz_diff
+            for a in reversed(a_pos):
+                f = zoom_steps[a]
+                if f < freq_mhz_diff:
+                    diff = f
+                    mod = mod_steps[a]
+                    break
+            freq_mhz_diff = diff
+            print("computeFreq: zoom in, diff: ", diff)
+        if zoom < 0:
+            print("computeFreq: zoom out")
+            diff = freq_mhz_diff
+            for a in a_pos:
+                f = zoom_steps[a]
+                if f > freq_mhz_diff:
+                    diff = f
+                    mod = mod_steps[a]
+                    break
+            freq_mhz_diff = diff
+            # freq_mhz_diff = freq_mhz_diff * 2
+
+        freq_mhz_diff = round(freq_mhz_diff)
+        if freq_mhz_diff < 20: 
+            freq_mhz_diff = 20
+
+        if right != 0:
+            fact = (right / 100)
+            print("computeFreq: shift by ", freq_mhz_mid, right, fact, freq_mhz_diff)
+            freq_mhz_mid = freq_mhz_mid + round(freq_mhz_diff * fact)
+            for a in a_pos:
+                if zoom_steps[a] == diff:
+                    mod = mod_steps[a]
+                    break
+
+        freq_mhz_min = freq_mhz_mid - round(freq_mhz_diff / 2)
+        freq_mhz_max = freq_mhz_mid + round(freq_mhz_diff / 2)
+        m_10 = freq_mhz_min % mod
+        print("computeFreq: freq_mhz ...:",freq_mhz_min, mod, diff)
+        if m_10 > 0:
+            freq_mhz_min -= m_10
+            freq_mhz_max -= m_10
+        print("computeFreq: freq_mhz new:", freq_mhz_min, freq_mhz_max, freq_mhz_diff)
+        self.startFreqSpinBox.setValue(freq_mhz_min)
+        self.stopFreqSpinBox.setValue(freq_mhz_max)
+
+    @QtCore.Slot()
+    def on_buttonZoomOut_clicked(self):
+        self.computeFreq(-1, 0)
+    
+    @QtCore.Slot()
+    def on_buttonZoomIn_clicked(self):
+        self.computeFreq(1, 0)
+
+    @QtCore.Slot()
+    def on_buttonFreqLeft_clicked(self):
+        self.computeFreq(0, -50)
+
+    @QtCore.Slot()
+    def on_buttonFreqRight_clicked(self):
+        self.computeFreq(0, 50)
+        
 
     @QtCore.Slot()
     def on_startButton_clicked(self):
@@ -412,12 +496,21 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
             curve.setVisible(checked)
 
     @QtCore.Slot(bool)
-    def on_smoothCheckBox_toggled(self, checked):
+    def on_freqSmoothCheckBox_toggled(self, checked):
         settings = QtCore.QSettings()
         self.data_storage.set_smooth(
             checked,
             settings.value("smooth_length", 11, int),
             settings.value("smooth_window", "hanning")
+        )
+
+    @QtCore.Slot(bool)
+    def on_temporalSmoothCheckBox_toggled(self, checked):
+        settings = QtCore.QSettings()
+        self.data_storage.set_temporal_smooth(
+            checked,
+            settings.value("temporal_smooth_length", 11, int),
+            settings.value("temporal_smooth_window", "hanning")
         )
 
     @QtCore.Slot(bool)
@@ -446,14 +539,25 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
             )
 
     @QtCore.Slot()
-    def on_smoothButton_clicked(self):
-        dialog = QSpectrumAnalyzerSmoothing(self)
+    def on_freqSmoothButton_clicked(self):
+        dialog = QSpectrumAnalyzerSmoothingFrequency(self)
         if dialog.exec_():
             settings = QtCore.QSettings()
             self.data_storage.set_smooth(
-                bool(self.smoothCheckBox.isChecked()),
+                bool(self.freqSmoothCheckBox.isChecked()),
                 settings.value("smooth_length", 11, int),
                 settings.value("smooth_window", "hanning")
+            )
+
+    @QtCore.Slot()
+    def on_temporalSmoothButton_clicked(self):
+        dialog = QSpectrumAnalyzerSmoothingTemporal(self)
+        if dialog.exec_():
+            settings = QtCore.QSettings()
+            self.data_storage.set_temporal_smooth(
+                bool(self.temporalSmoothCheckBox.isChecked()),
+                settings.value("temporal_smooth_length", 11, int),
+                settings.value("temporal_smooth_window", "hanning")
             )
 
     @QtCore.Slot()
