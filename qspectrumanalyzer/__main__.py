@@ -327,7 +327,9 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         freq_changed = self.last_freq_min != freq_mhz_min or self.last_freq_max != freq_mhz_max
         if freq_changed:
             # Set the plotter to defined x range (override any zooming)
-            self.spectrumPlotWidget.setXRange(freq_mhz_min * 1000 * 1000 * 0.99, freq_mhz_max * 1000 * 1000 * 1.01)
+            diff_hz = span_mhz * 1000 * 1000
+            add_hz = diff_hz * 0.01
+            self.spectrumPlotWidget.setXRange(freq_mhz_min * 1000 * 1000 - add_hz, freq_mhz_max * 1000 * 1000 + add_hz)
         
         self.last_freq_min = freq_mhz_min
         self.last_freq_max = freq_mhz_max
