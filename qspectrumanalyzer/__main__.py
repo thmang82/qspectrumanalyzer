@@ -59,6 +59,11 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         self.data_storage = None
         self.power_thread = None
         self.backend = None
+
+        self.last_freq_min = 0
+        self.last_freq_max = 0
+        self.last_bin_size = 0
+
         self.setup_power_thread()
 
         self.update_buttons()
@@ -315,9 +320,18 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         freq_mhz_min = self.startFreqSpinBox.value()
         freq_mhz_max = self.stopFreqSpinBox.value()
         span_mhz = freq_mhz_max - freq_mhz_min
-        bin_size_kHz = float(self.binSizeSpinBox.value())
+        bin_size_kHz = self.binSizeSpinBox.value()
         bin_num = span_mhz * 1000 / bin_size_kHz if bin_size_kHz > 0 else -1
         self.labelBins.setText(str(freq_mhz_min) + " to " + str(freq_mhz_max) + " MHz" + "\nSpan: " + str(span_mhz) + " MHz - " + str(round(bin_num)) +" Bins" )
+
+        freq_changed = self.last_freq_min != freq_mhz_min or self.last_freq_max != freq_mhz_max
+        if freq_changed:
+            # Set the plotter to defined x range (override any zooming)
+            self.spectrumPlotWidget.setXRange(freq_mhz_min * 1000 * 1000 * 0.99, freq_mhz_max * 1000 * 1000 * 1.01)
+        
+        self.last_freq_min = freq_mhz_min
+        self.last_freq_max = freq_mhz_max
+        self.last_bin_size = bin_size_kHz
 
         self.spectrumPlotWidget.main_curve = bool(self.mainCurveCheckBox.isChecked())
         self.spectrumPlotWidget.main_color = str_to_color(settings.value("main_color", "255, 255, 0, 255"))
@@ -334,7 +348,6 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         self.spectrumPlotWidget.persistence_decay = settings.value("persistence_decay", "exponential")
         self.spectrumPlotWidget.persistence_color = str_to_color(settings.value("persistence_color", "0, 255, 0, 255"))
        
-        # self.spectrumPlotWidget.setXRange(freq_mhz_min * 1000 * 1000, freq_mhz_max * 1000 * 1000)
         self.spectrumPlotWidget.clear_plot()
         self.spectrumPlotWidget.clear_peak_hold_max()
         self.spectrumPlotWidget.clear_peak_hold_min()
