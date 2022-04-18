@@ -312,6 +312,13 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         self.waterfallPlotWidget.history_size = settings.value("waterfall_history_size", 100, int)
         self.waterfallPlotWidget.clear_plot()
 
+        freq_mhz_min = self.startFreqSpinBox.value()
+        freq_mhz_max = self.stopFreqSpinBox.value()
+        span_mhz = freq_mhz_max - freq_mhz_min
+        bin_size_kHz = float(self.binSizeSpinBox.value())
+        bin_num = span_mhz * 1000 / bin_size_kHz if bin_size_kHz > 0 else -1
+        self.labelBins.setText(str(freq_mhz_min) + " to " + str(freq_mhz_max) + " MHz" + "\nSpan: " + str(span_mhz) + " MHz - " + str(round(bin_num)) +" Bins" )
+
         self.spectrumPlotWidget.main_curve = bool(self.mainCurveCheckBox.isChecked())
         self.spectrumPlotWidget.main_color = str_to_color(settings.value("main_color", "255, 255, 0, 255"))
         self.spectrumPlotWidget.peak_hold_max = bool(self.peakHoldMaxCheckBox.isChecked())
@@ -326,6 +333,8 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         self.spectrumPlotWidget.persistence_length = settings.value("persistence_length", 5, int)
         self.spectrumPlotWidget.persistence_decay = settings.value("persistence_decay", "exponential")
         self.spectrumPlotWidget.persistence_color = str_to_color(settings.value("persistence_color", "0, 255, 0, 255"))
+       
+        # self.spectrumPlotWidget.setXRange(freq_mhz_min * 1000 * 1000, freq_mhz_max * 1000 * 1000)
         self.spectrumPlotWidget.clear_plot()
         self.spectrumPlotWidget.clear_peak_hold_max()
         self.spectrumPlotWidget.clear_peak_hold_min()
@@ -376,11 +385,14 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         freq_mhz_max = self.stopFreqSpinBox.value()
         freq_mhz_mid = (freq_mhz_max + freq_mhz_min) / 2.0
         freq_mhz_diff = abs(freq_mhz_max - freq_mhz_min)
-        print("computeFreq: freq_mhz old:", freq_mhz_min, freq_mhz_max, freq_mhz_diff)
+        bin_size_kHz = float(self.binSizeSpinBox.value())
+        print("computeFreq: freq_mhz old:", freq_mhz_min, freq_mhz_max, freq_mhz_diff, bin_size_kHz)
         zoom_steps = [ 20, 50, 100, 200, 500, 1000 ]
         mod_steps  = [ 10, 25,  50, 100, 250,  500 ]
         a_pos      = [  0,  1,   2,   3,   4,    5 ]
+        bin_sizes  = [  2, 10,  20,  50, 100, 1000 ]
         mod = 10
+        bin_size = bin_size_kHz
         diff = freq_mhz_diff
         if zoom > 0:
             print("computeFreq: zoom in")
@@ -391,6 +403,7 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
                 if f < freq_mhz_diff:
                     diff = f
                     mod = mod_steps[a]
+                    bin_size = bin_sizes[a]
                     break
             freq_mhz_diff = diff
             print("computeFreq: zoom in, diff: ", diff)
@@ -402,6 +415,7 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
                 if f > freq_mhz_diff:
                     diff = f
                     mod = mod_steps[a]
+                    bin_size = bin_sizes[a]
                     break
             freq_mhz_diff = diff
             # freq_mhz_diff = freq_mhz_diff * 2
@@ -417,6 +431,7 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
             for a in a_pos:
                 if zoom_steps[a] == diff:
                     mod = mod_steps[a]
+                    bin_size = bin_sizes[a]
                     break
 
         freq_mhz_min = freq_mhz_mid - round(freq_mhz_diff / 2)
@@ -429,6 +444,7 @@ class QSpectrumAnalyzerMainWindow(QtWidgets.QMainWindow, Ui_QSpectrumAnalyzerMai
         print("computeFreq: freq_mhz new:", freq_mhz_min, freq_mhz_max, freq_mhz_diff)
         self.startFreqSpinBox.setValue(freq_mhz_min)
         self.stopFreqSpinBox.setValue(freq_mhz_max)
+        self.binSizeSpinBox.setValue(bin_size)
 
     @QtCore.Slot()
     def on_buttonZoomOut_clicked(self):

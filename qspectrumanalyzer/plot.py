@@ -34,6 +34,9 @@ class SpectrumPlotWidget:
 
         self.create_plot()
 
+    def setXRange(self, start, end):
+        self.plot.setXRange(start, end, padding=0)
+
     def create_plot(self):
         """Create main spectrum plot"""
         self.posLabel = self.layout.addLabel(row=0, col=0, justify="right")
@@ -218,7 +221,7 @@ class SpectrumPlotWidget:
         for i in range(min(self.persistence_length, data_storage.history.history_size - 1)):
             data = data_storage.history[-i - 2]
             if data_storage.smooth:
-                data = data_storage.smooth_data(data)
+                data = data_storage.smooth_data_freq(data)
             self.persistence_data.append(data)
         QtCore.QTimer.singleShot(0, lambda: self.update_persistence(data_storage, force=True))
 

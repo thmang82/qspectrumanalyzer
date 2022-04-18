@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1200</width>
-    <height>892</height>
+    <height>907</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -52,7 +52,7 @@
      <x>0</x>
      <y>0</y>
      <width>1200</width>
-     <height>32</height>
+     <height>33</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -82,7 +82,7 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>190</width>
+     <width>156</width>
      <height>130</height>
     </size>
    </property>
@@ -143,8 +143,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>208</width>
-     <height>166</height>
+     <width>222</width>
+     <height>199</height>
     </size>
    </property>
    <property name="features">
@@ -284,42 +284,83 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="3" column="0" colspan="2">
       <layout class="QHBoxLayout" name="buttonsLayout">
-        <item>
-            <widget class="QPushButton" name="buttonFreqLeft">
-                <property name="text">
-                    <string>&lt;</string>
-                </property>
-            </widget>
-        </item>
-        <item>
-            <widget class="QPushButton" name="buttonFreqRight">
-                <property name="enabled">
-                    <bool>true</bool>
-                </property>
-                <property name="text">
-                    <string>&gt;</string>
-                </property>
-                <property name="default">
-                    <bool>false</bool>
-                </property>
-            </widget>
-        </item>
-        <item>
-            <widget class="QPushButton" name="buttonZoomOut">
-                <property name="text">
-                    <string>-</string>
-                </property>
-            </widget>
-        </item>
-        <item>
-            <widget class="QPushButton" name="buttonZoomIn">
-                <property name="text">
-                    <string>+</string>
-                </property>
-            </widget>
-        </item>
+       <item>
+        <widget class="QPushButton" name="buttonFreqLeft">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>&lt;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="buttonFreqRight">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>&gt;</string>
+         </property>
+         <property name="default">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="buttonZoomOut">
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="buttonZoomIn">
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>+</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="0" colspan="2">
+      <layout class="QHBoxLayout" name="textLayout">
+       <item>
+        <widget class="QLabel" name="labelBins">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
     </layout>
@@ -368,17 +409,17 @@
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
+       <property name="decimals">
+        <number>3</number>
+       </property>
        <property name="maximum">
         <double>999.000000000000000</double>
        </property>
-       <property name="decimals">
-        <double>3</double>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
        </property>
        <property name="value">
         <double>1.000000000000000</double>
-       </property>
-       <property name="singleStep">
-        <double>0.01</double>
        </property>
       </widget>
      </item>
@@ -456,7 +497,7 @@
      <item row="7" column="0">
       <widget class="QCheckBox" name="freqSmoothCheckBox">
        <property name="text">
-        <string>Frequency Smoothing</string>
+        <string>Freq. Smoothing</string>
        </property>
       </widget>
      </item>
